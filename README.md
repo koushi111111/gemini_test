@@ -57,7 +57,7 @@ Flutter(フロント) + FastAPI(バックエンド) + Gemini on Google Cloud を
                                    ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │ Google Cloud                                                        │
-│   Vertex AI ── Gemini (gemini-2.5-flash)                            │
+│   Vertex AI ── Gemini (gemini-3.8-flash)                            │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
