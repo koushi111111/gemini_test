@@ -95,6 +95,8 @@ tx_hackathon_gc/
 ├── README.md                 # 本ドキュメント(構成・手順の正)
 ├── CLAUDE.md                 # Claude Code 向けの作業ルール
 ├── docker-compose.yml        # フロント + バックの同時起動
+├── .github/
+│   └── workflows/ci.yml      # push / PR 時の Lint・型チェック・テスト
 ├── backend/                  # FastAPI + uv
 │   ├── pyproject.toml / uv.lock
 │   ├── .env.example          # 環境変数の雛形(.env は Git 管理外)
@@ -212,6 +214,8 @@ flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:8000
 
 ## 5. テスト / 静的解析
 
+### 5.1 ローカル
+
 ```bash
 # バックエンド
 cd backend
@@ -222,14 +226,60 @@ uv run python -m mypy app        # 型チェック(下記の注意参照)
 
 # フロントエンド
 cd frontend
-flutter analyze
-flutter test
+dart format .                    # フォーマット
+flutter analyze                  # 静的解析
+flutter test                     # テスト
 ```
 
 > **Windows のアプリケーション制御ポリシーについて**
 > - `uv run pytest`(`pytest.exe`)はブロックされることがあるため、`uv run python -m pytest` を使う。
 > - mypy はネイティブ拡張(`*_mypyc.pyd`)がブロックされ、現状この開発マシンでは実行できない。
->   型チェックは Docker(`docker compose run --rm backend python -m mypy app`)または CI で実行する。
+>   型チェックは Docker(`docker compose run --rm backend python -m mypy app`)または CI(5.2)で実行する。
+
+### 5.2 CI(GitHub Actions)
+
+`main` への push と `main` 向けの PR で [.github/workflows/ci.yml](.github/workflows/ci.yml) が自動実行される
+(手動実行は Actions タブの "Run workflow")。3 ジョブが並列に走る。
+
+| ジョブ | 実行内容 |
+| --- | --- |
+| `backend` | `uv sync --frozen` → `ruff check` → `ruff format --check` → **`mypy app`** → `pytest` |
+| `frontend` | `flutter pub get` → `dart format --set-exit-if-changed` → `flutter analyze` → `flutter test` |
+| `docker` | `docker compose config` の検証 → バックエンドイメージのビルド |
+
+- ローカルで mypy が動かない環境でも、**型チェックは push 後に CI が必ず実行する**。
+- 依存は `uv.lock` / `pubspec.lock` に固定され、CI はキャッシュを使って再現性のある環境で検証する。
+- 外部 API(Gemini)は呼ばない。テストは全てスタブで完結させること。
+- **ステータスチェック名 = ジョブの `name:`**。ルールセット(5.3)で指定するため、
+  `backend` / `frontend` / `docker` の 3 つは安易に変更しない。変更する場合はルールセット側も直す。
+
+### 5.3 CI を必須にする(ブランチ保護)
+
+CI は作っただけでは「落ちてもマージできる」状態。`main` を保護して初めてゲートになる。
+
+**前提**: 一度 push して CI を実行しておく。ステータスチェックは
+**過去に実行された履歴からしか選択できない**ため、未実行だと候補に出てこない。
+
+**手順**: リポジトリの **Settings → Rules → Rulesets → New ruleset → New branch ruleset**
+
+| 設定項目 | 値 |
+| --- | --- |
+| Ruleset Name | `protect-main` |
+| Enforcement status | `Active`(まず様子を見るなら `Evaluate` でドライラン) |
+| Target branches | Add target → **Include default branch**(= `main`) |
+| Restrict deletions | ON |
+| Block force pushes | ON |
+| Require a pull request before merging | ON(Required approvals は 1 人開発なら `0`) |
+| Require status checks to pass | ON → Add checks で `backend` / `frontend` / `docker` を追加(Source: GitHub Actions) |
+| Require branches to be up to date before merging | 任意(ON にすると main 更新のたびに再実行が必要) |
+
+注意点:
+
+- **private リポジトリでのブランチ保護 / ルールセットは有料プラン(Pro / Team 以上)が必要**。
+  Free の private では設定できないため、public にするかプランを確認する。
+- 必須にしたチェックが「一度も実行されない」状況(例: ワークフローに `paths` フィルタを足す)を作ると、
+  PR が永久に pending になりマージできなくなる。必須チェックと実行条件は必ず揃える。
+- 管理者も含めて例外なく適用される。緊急時は Bypass list に自分を追加するか、ルールセットを一時 `Disabled` にする。
 
 ---
 

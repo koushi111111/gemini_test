@@ -32,11 +32,13 @@
 - [x] AC-2: Given `backend/`, When `uv run python -m pytest`, Then 全テストが成功する。
 - [x] AC-3: Given `frontend/`, When `flutter analyze` と `flutter test`, Then エラー 0 件で成功する。
 - [ ] AC-4: Given `.env` に GCP プロジェクトを設定した状態, When フロントからメッセージを送信, Then Gemini の応答が画面に表示される。(Vertex AI への到達は確認済み。実プロジェクト ID 設定後に要確認)
+- [x] AC-6: Given `main` への push, When GitHub Actions が起動, Then Lint / 型チェック / テストが自動実行され、失敗時に検知できる。(ワークフロー作成済み・ローカルで同等コマンドの成功を確認。GitHub 上での初回実行は未確認)
 - [x] AC-5: Given `docs/spec/_template/`, When 新機能を開始, Then requirements / design / tasks の雛形をコピーして使える。
 
 ## 5. 制約 / 前提
 
 - Gemini は Google Cloud(Vertex AI)経由で利用する。認証は ADC またはサービスアカウントキー。
+- 型チェック(mypy)は開発マシンのアプリ制御ポリシーで実行できないため、CI での実行を必須とする。
 - 開発マシンは Windows 11 を想定(バインドマウントのファイル監視はポーリング)。
 
 ## 6. 未決事項

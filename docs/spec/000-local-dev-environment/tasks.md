@@ -1,7 +1,7 @@
 # 実装タスク: ローカル開発環境の整備
 
 - 対応する設計: `./design.md`
-- 進捗: 7 / 8
+- 進捗: 8 / 9
 
 ## タスク一覧
 
@@ -36,6 +36,10 @@
   - 変更対象: `backend/Dockerfile`, `frontend/Dockerfile`, `docker-compose.yml`
   - 完了条件: `docker compose config` が通り、`docker compose up` で両サービスが起動する / 関連 AC: AC-1
   - 備考: ファイル作成と `docker compose config` は完了。イメージビルド込みの実起動確認が残っている
+- [x] **T-09: CI(GitHub Actions)の構築**
+  - 変更対象: `.github/workflows/ci.yml`
+  - 完了条件: push / PR で backend(ruff・mypy・pytest) / frontend(format・analyze・test) / docker の 3 ジョブが実行される
+  - 関連 AC: AC-6
 - [x] **T-08: ドキュメント整備**
   - 変更対象: `README.md`, `CLAUDE.md`, `docs/spec/`
   - 完了条件: spec テンプレートが揃い、README にアーキテクチャと起動手順が書かれている / 関連 AC: AC-5

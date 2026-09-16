@@ -13,8 +13,7 @@ class FakeChatRepository implements ChatRepository {
   Future<String> sendMessage({
     required String message,
     required List<ChatMessage> history,
-  }) async =>
-      'echo: $message';
+  }) async => 'echo: $message';
 }
 
 void main() {

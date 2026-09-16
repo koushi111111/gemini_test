@@ -12,7 +12,7 @@ Claude Code がこのリポジトリで作業するときのルール。
   - 依存ライブラリ・技術スタック(§1)
   - 環境変数・認証方法(§3)
   - 起動コマンド・ポート・compose 構成(§4)
-  - テスト / 静的解析のコマンド(§5)
+  - テスト / 静的解析のコマンド、CI の構成(§5)
   - 機能の追加・完了(§6 の機能一覧)
   - 新たに踏んだ環境依存の落とし穴(§8 トラブルシューティング)
 - 作業の最後に「README の更新が必要な変更をしたか」を必ず自己点検し、更新した箇所(または不要と判断した理由)を報告する。
@@ -65,11 +65,18 @@ Claude Code がこのリポジトリで作業するときのルール。
 
 ```bash
 # backend
-cd backend && uv run python -m pytest && uv run ruff check .
+cd backend && uv run python -m pytest && uv run ruff check . && uv run ruff format .
 
 # frontend
-cd frontend && flutter analyze && flutter test
+cd frontend && dart format . && flutter analyze && flutter test
 ```
+
+push 後は GitHub Actions([.github/workflows/ci.yml](.github/workflows/ci.yml))が
+ruff / **mypy** / pytest / dart format / flutter analyze / flutter test / docker build を実行する。
+CI と同じ内容をローカルでも通してから push すること(mypy はローカルで動かない場合があるため CI 結果を確認する)。
+CI のステップを増減したら README §5.2 も更新する。
+ジョブ名(`backend` / `frontend` / `docker`)はブランチ保護の必須チェック名と一致しているため、
+変更するとルールセットが機能しなくなる。変更する場合は README §5.3 の手順も合わせて直すこと。
 
 - `uv run pytest` は Windows のアプリケーション制御ポリシーでブロックされることがあるため、
   **`uv run python -m pytest`** を使う。
