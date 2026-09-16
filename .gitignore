@@ -1,0 +1,31 @@
+# --- Python / backend ---
+backend/.venv/
+backend/.env
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Flutter / frontend ---
+frontend/.dart_tool/
+frontend/build/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/ios/Pods/
+frontend/android/.gradle/
+frontend/android/local.properties
+
+# --- 認証情報 / シークレット ---
+infra/secrets/*
+!infra/secrets/.gitkeep
+*.pem
+*-sa.json
+.env
+.env.local
+
+# --- OS / エディタ ---
+.DS_Store
+Thumbs.db
+.idea/
+*.iml
