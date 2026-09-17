@@ -320,9 +320,174 @@ docs/spec/001-user-authentication/
 5. テストを追加し(`backend/tests/`, `frontend/test/`)、`pytest` と `flutter test` を通す。
 6. `tasks.md` のチェックを埋め、README の機能一覧を更新する。
 
+作業中の Git 操作は §8 のコマンド一覧を参照。
+
 ---
 
-## 8. トラブルシューティング
+## 8. Git コマンド一覧(初心者向け)
+
+### 8.1 まず知っておく 4 つの場所
+
+```
+①作業ツリー          ②ステージ            ③ローカルリポジトリ    ④リモート(GitHub)
+ 手元のファイル  ──→  コミット予定の箱  ──→  手元の履歴       ──→  みんなの履歴
+                git add            git commit          git push
+
+                         ←────────────────────────────────  git pull
+```
+
+「保存した = Git に記録された」ではない。`add`(②へ) → `commit`(③へ) → `push`(④へ)の 3 段階を通す。
+
+### 8.2 初回だけやること
+
+```bash
+# 名前とメールアドレス(コミットに記録される)
+git config --global user.name "あなたの名前"
+git config --global user.email "you@example.com"
+
+# 既定ブランチ名を main にする / pull は rebase にして履歴を綺麗に保つ
+git config --global init.defaultBranch main
+git config --global pull.rebase true
+
+# GitHub リポジトリを作って紐づける(gh CLI がある場合)
+gh auth login
+gh repo create tx_hackathon_gc --private --source=. --remote=origin
+
+# gh を使わない場合(GitHub の Web 画面で空リポジトリを作ってから)
+git remote add origin https://github.com/<ユーザー名>/tx_hackathon_gc.git
+
+# 最初のコミットと push
+git add .
+git commit -m "chore: 開発環境の初期構築"
+git push -u origin main
+```
+
+### 8.3 機能開発の 1 サイクル(この流れを繰り返す)
+
+```bash
+# 1. 最新の main から作業ブランチを作る(ブランチ名は spec に合わせる)
+git switch main
+git pull
+git switch -c feat/001-user-authentication
+
+# 2. コードを編集する …
+
+# 3. 何を変えたか確認する
+git status          # 変更されたファイルの一覧
+git diff            # 変更内容そのもの
+
+# 4. コミットする
+git add .                                   # 全部を対象にする
+git add backend/app/api/routes/auth.py      # ファイルを選ぶ場合
+git commit -m "feat: ログイン API を追加"
+
+# 5. GitHub に送る(初回は -u、2 回目以降は git push だけでよい)
+git push -u origin feat/001-user-authentication
+
+# 6. PR を作る → CI(backend / frontend / docker)が緑になったらマージ
+gh pr create --fill
+gh pr checks            # CI の状況を確認
+gh pr merge --squash    # Web 画面のマージボタンでもよい
+
+# 7. 後片付け
+git switch main
+git pull
+git branch -d feat/001-user-authentication
+```
+
+### 8.4 よく使うコマンド
+
+**確認する**
+
+| コマンド | 何ができるか |
+| --- | --- |
+| `git status` | 今どのブランチにいて、何が変更 / ステージされているか |
+| `git diff` | まだ `add` していない変更内容 |
+| `git diff --staged` | `add` 済み(コミット予定)の変更内容 |
+| `git log --oneline -10` | 直近 10 件のコミット履歴 |
+| `git log --oneline --graph --all` | ブランチの分岐を図で表示 |
+| `git show <コミットID>` | そのコミットの変更内容 |
+
+**記録する / 送る**
+
+| コマンド | 何ができるか |
+| --- | --- |
+| `git add <ファイル>` / `git add .` | コミット対象に加える |
+| `git commit -m "メッセージ"` | 記録する |
+| `git commit -am "メッセージ"` | 変更済みファイルを add + commit(新規ファイルは対象外) |
+| `git push` | GitHub に送る |
+| `git push -u origin <ブランチ名>` | 新しいブランチを初めて送るとき |
+| `git pull` | GitHub の変更を取り込む |
+| `git fetch` | 取り込まずに最新情報だけ取得する |
+
+**ブランチ**
+
+| コマンド | 何ができるか |
+| --- | --- |
+| `git branch` | ローカルのブランチ一覧 |
+| `git switch <ブランチ名>` | ブランチを切り替える |
+| `git switch -c <ブランチ名>` | 作って切り替える |
+| `git switch -` | 直前にいたブランチに戻る |
+| `git branch -d <ブランチ名>` | マージ済みブランチを削除 |
+| `git merge main` | 作業ブランチに main の変更を取り込む |
+
+**取り消す**(よく使う順)
+
+| やりたいこと | コマンド | 補足 |
+| --- | --- | --- |
+| ファイルの変更を捨てて元に戻す | `git restore <ファイル>` | **戻せないので注意** |
+| `add` を取り消す(変更は残す) | `git restore --staged <ファイル>` | |
+| 直前のコミットメッセージを直す | `git commit --amend -m "新しいメッセージ"` | **push 前だけ** |
+| 直前のコミットを取り消す(変更は残す) | `git reset --soft HEAD~1` | **push 前だけ** |
+| push 済みのコミットを打ち消す | `git revert <コミットID>` | 打ち消すコミットを新たに積む。履歴を壊さない |
+| 作業を一時退避する | `git stash` → 戻すときは `git stash pop` | ブランチを急いで切り替えたいとき |
+
+**コンフリクト(競合)が起きたら**
+
+```bash
+git pull                     # ここで CONFLICT と表示される
+# → エディタで <<<<<<< ======= >>>>>>> の箇所を手で直す(残す内容を決める)
+git add <直したファイル>
+git commit                   # マージコミットを作る(rebase 中なら git rebase --continue)
+
+# 手に負えなくなったら中断して元に戻す
+git merge --abort            # または git rebase --abort
+```
+
+### 8.5 コミットメッセージの書き方
+
+`<種別>: <日本語で何をしたか>` の形にする。
+
+| 種別 | 使う場面 |
+| --- | --- |
+| `feat` | 機能追加 |
+| `fix` | バグ修正 |
+| `docs` | ドキュメントのみの変更 |
+| `refactor` | 挙動を変えないコード整理 |
+| `test` | テストの追加 / 修正 |
+| `chore` | 設定・依存関係・CI など |
+
+```bash
+git commit -m "feat: チャット履歴の保存を追加"
+git commit -m "fix: 空メッセージ送信時に 500 になる問題を修正"
+```
+
+### 8.6 やってはいけないこと
+
+| やってはいけないこと | 理由 / 代わりにすること |
+| --- | --- |
+| `main` に直接コミット / push | 必ずブランチを切って PR を出す(ブランチ保護で拒否される) |
+| `git push --force` | 他人の履歴を壊す。保護設定でも拒否される。打ち消しは `git revert` |
+| `.env` や `infra/secrets/*.json` をコミット | 資格情報の漏洩。`.gitignore` 済みだが `git add -f` で強制追加しない |
+| `git reset --hard` を安易に使う | コミットしていない変更が**完全に消える**。まず `git stash` |
+| 巨大な 1 コミット | レビュー不能。機能の区切りごとにコミットする |
+
+> **もし `.env` をコミットしてしまったら**: push 前なら `git rm --cached backend/.env` してコミットし直す。
+> push 済みなら履歴から消えないため、**該当する認証情報を GCP 側で無効化して作り直す**。
+
+---
+
+## 9. トラブルシューティング
 
 | 症状 | 対処 |
 | --- | --- |
